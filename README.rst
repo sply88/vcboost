@@ -35,6 +35,9 @@ The whole idea is mainly based on  [3]_.
 `DecisionTreeRegressors <https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeRegressor.html>`_
 from `sklearn <https://scikit-learn.org/stable/>`_ are used as base learners.
 
+References
+***********
+
 .. [1] Hastie, T., & Tibshirani, R. (1993). Varying‐coefficient models. Journal of the Royal Statistical Society: Series B (Methodological), 55(4), 757-779.
 .. [2] Friedman, J. H. (2001). Greedy function approximation: a gradient boosting machine. Annals of statistics, 1189-1232.
 .. [3] Zhou, Y., & Hooker, G. (2019). Tree boosted varying coefficient models. arXiv preprint arXiv:1904.01058
