@@ -3,9 +3,7 @@ vcboost
 *********
 Estimation of varying coefficient models by gradient boosting.
 
-.. note::
-    Currently just experimenting. Nothing properly tested!
-
+**NOTE**: Currently just experimenting. Nothing properly tested!
 
 Given data
 
