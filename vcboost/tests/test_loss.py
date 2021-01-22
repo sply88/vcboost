@@ -51,4 +51,51 @@ class TestLS:
         assert ls.line_search(residual, direction) == expected
 
 
-# TODO: Test LAD
+class TestLAD:
+
+    @pytest.mark.parametrize('y, y_hat, expected', [
+        (np.zeros(1), np.zeros(1), 0),
+        (np.zeros(1), np.ones(1), 1),
+        (np.ones(1), np.zeros(1), 1),
+        (-np.ones(1), np.zeros(1), 1),
+        (np.ones(4), np.ones(4), 0),
+        (np.ones(4), np.array([1, 2, 3, 4]), 1.5),
+        (np.ones(5), np.array([-5, -4, -3, -2, -1]), 4)
+    ])
+    def test__call__(self, y, y_hat, expected):
+
+        lad = LAD()
+
+        assert lad(y, y_hat) == expected
+
+    @pytest.mark.parametrize('y, y_hat, expected', [
+        (np.zeros(1), np.zeros(1), np.array([0])),
+        (np.zeros(1), np.ones(1), np.array([-1])),
+        (np.ones(1), np.zeros(1), np.array([1])),
+        (-np.ones(1), np.zeros(1), np.array([-1])),
+        (10*np.ones(1), np.ones(1), np.array([1])),
+        (np.ones(1), 10*np.ones(1), np.array([-1])),
+        (np.ones(4), np.array([-5, 4, -20, 7]), np.array([1, -1, 1, -1])),
+        (np.array([12, -3.5, -9, 1.1]), -np.ones(4), np.array([1, -1, -1, 1]))
+    ])
+    def test_negative_gradient(self, y, y_hat, expected):
+
+        lad = LAD()
+
+        assert (lad.negative_gradient(y, y_hat) == expected).all()
+
+    @pytest.mark.parametrize('residual, direction, expected', [
+        (np.ones(1), np.zeros(1), 0),
+        (np.ones(1), np.ones(1)*1e-9, 0),
+        (np.ones(5), np.zeros(5), 0),
+        (np.ones(5), np.ones(5) * 1e-9, 0),
+        (np.ones(1), np.ones(1), 1),
+        (np.ones(4), np.ones(4), 1),
+        (np.array([16, 16, 16]), np.array([2, 4, 8]), 2)
+
+    ])
+    def test_line_search(self, residual, direction, expected):
+
+        lad = LAD()
+
+        assert lad.line_search(residual, direction) == expected
