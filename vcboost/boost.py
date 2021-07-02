@@ -42,7 +42,7 @@ class VCBooster:
     """
 
     def __init__(self, n_stages=100, learning_rate=0.1, max_depth=3, min_samples_leaf=0.05, splitter='best',
-                 line_search_strategy='global', mini_updates=False, loss=LS()):
+                 line_search_strategy='global', mini_updates=False, loss=LS(), verbose=0):
 
         self.n_stages = n_stages
         self.learning_rate = learning_rate
@@ -59,13 +59,15 @@ class VCBooster:
         # loss function used
         self.loss = loss
 
-        # more attributes set when fit is called
+        # more attributes set during fit
         self.ensembles = None
         self.ncol_X = None
         self.ncol_Z = None
 
         self.train_loss = None
         self.validation_loss = None
+
+        self.verbose = verbose
 
     @property
     def fitted(self):
@@ -190,7 +192,8 @@ class VCBooster:
 
         for i in range(self.n_stages):
 
-            print('Stage {} / {}:'.format(i+1, self.n_stages))
+            if self.verbose:
+                print('Stage {} / {}:'.format(i+1, self.n_stages))
 
             # keep track of loss for training data and validation data
             self.train_loss.append(self.loss(y, y_hat))
