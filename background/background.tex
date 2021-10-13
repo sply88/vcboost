@@ -1,0 +1,62 @@
+\documentclass{article}
+
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\usepackage{biblatex}
+\addbibresource{bibliography.bib}
+
+\begin{document}
+
+\section{Background}
+
+Given data $(y_i, x_i, z_i), i = 1, \dots, n$ with outcome $y_i \in \mathbb{R}$, covariates $x_i \in \mathbb{R}^p$ and effect modifiers $z_i \in \mathbb{R}^q$ one assumes the varying coefficient model
+%
+\begin{equation}
+y_i = \sum_{j=1}^p x_{ij} \beta_j(z_i) + \varepsilon_i = x_i^T \beta(z_i) + \varepsilon_i,
+\end{equation}
+%
+\cite{hastie1993varying}. The coefficients $\beta(\cdot) = (\beta_1(\cdot), \dots, \beta_p(\cdot))^T$ determine a (rather simple) functional, relationship between outcome $y$ and (likely low dimensional) covariate $x$. The coefficients themselves are considered to be (potentially complex) functions of the (potentially high dimensional) effect modifier $z$.\\
+Each varying coefficient mapping $\beta_j(\cdot)$ is estimated using an ensemble of gradient
+boosted decision trees. This is done by iteratively minimizing a loss function
+%
+\begin{equation}
+    L(y, \beta) = \sum_{i=1}^n l(y_i, x_i^T\beta(z_i)).
+\end{equation}
+%
+The generic gradient boosting algorithm described in \cite{friedman2001greedy}. Is adapted for the varying coefficient scenario. The resulting procedure is sketched in Algorithm~\ref{alg:vcboost} below. A similar algorithm has already been described by \cite{zhou2019tree}.
+%
+\begin{algorithm}[h]
+\caption{VCBoost}
+\label{alg:vcboost}
+	\begin{algorithmic}[1]
+		\State $\beta_j^{(0)}(z) = 0$, $j = 1, \dots, p$
+		\For{$m = 1, \dots$, maxiter}	
+			\For{$j = 1, \dots, p$}
+				\State $\tilde{y_i} = - \frac{\partial l(y_i, x_i^T\beta^{(m-1)}(z_i))}{\partial \beta_j^{(m-1)}(z_i)}$ \Comment{negative gradient wrt. $\beta_j$}
+				\State $h = $ regression tree fit on $\{\tilde{y_i}, z_i\}_{i=1, \dots, n}$
+				\State $\rho = $ argmin$_{\rho} \left[ \sum_{i=1}^n l (y, x_i^T\beta^{(m-1)}(z_i) + \rho h(z_i) x_{ij}) \right]$ \Comment{line search}
+				\State $\beta_j^{(m)}(\cdot) = \beta_j^{(m-1)}(\cdot) + \rho h(\cdot)$
+			\EndFor
+		\EndFor
+	\end{algorithmic}
+\end{algorithm}\\
+%
+The pseudoresponses $\tilde{y_i}$ in Line 4 are obtained by noting that
+%
+\begin{equation}
+\tilde{y_i} = - \frac{\partial l(y_i, x_i^T\beta^{(m-1)}(z_i))}{\partial \beta_j^{(m-1)}(z_i)} = - \frac{\partial l(y_i, x_i^T\beta^{(m-1)}(z_i))}{\partial x_i^T\beta^{(m-1)}(z_i)}x_{ij}
+\end{equation}
+%
+and the derivative remaining on the right hand side is the usual gradient based on the previous fitted responses $x_i^T\beta^{(m-1)}(z_i)$. Hence, this is easily determined for common loss functions. Also this part of the pseudo response is the same, regardless of the coordinate ($j = 1, \dots, p$) currently handled in the inner loop. A variation of the algorithm only computes $\frac{\partial l(y_i, x_i^T\beta^{(m-1)}(z_i))}{\partial x_i^T\beta^{(m-1)}(z_i)}$ once during the outer loop and then updates all coefficient estimates before recomputing.\\
+Also the line search determining the step size $\rho$ can be done globally, e.g. determining one $\rho$ based on all observations $i = 1, \dots n$ as shown above. Alternatively, the line search can be done separately for each leaf in the regression tree $h$ (see Eq. (18) in \cite{friedman2001greedy}).\\
+As usual one can also introduce a learning rate $ < 1$ to shrink the step size for the update in row 7 of the algorithm.\\
+Finally there would also be many hyper-parameters controlling the tree building process in line 5.
+
+\subsection{Details for specific loss functions}
+...
+
+\printbibliography
+
+\end{document}
