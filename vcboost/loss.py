@@ -42,7 +42,7 @@ class LAD(LossFunction):
     """Least absolute deviation loss"""
 
     def __call__(self, y, y_hat):
-        return np.median(np.abs(y - y_hat))
+        return np.mean(np.abs(y - y_hat))
 
     def negative_gradient(self, y, y_hat):
         return np.sign(y - y_hat)

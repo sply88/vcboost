@@ -26,15 +26,17 @@ class VCBooster:
         observations (Friedman 2001, Algorithm 1, Line 5) or 'leaf' to do line search for each leaf
         (Friedman 2001, Eq. 18)
     mini_updates : bool, default=False
-        If True current prediction y_hat, residuals and negative gradient will be updated after a single coordinate
-        has been updated. Otherwise update only after current boosting stage has been run for all coordinates
+        If True current prediction y_hat, residuals and negative gradient will be recomputed after a single coordinate
+        has been updated. Otherwise recompute only after current boosting stage has been run for all coordinates
     loss : loss.LossFunction
         Instance of a loss function that can be called and has methods negative_gradient, and line_search
+    verbose : int
+        If not 0 print progress during fit
 
     Attributes
     ----------
     ensembles : list of lists
-        Set ensembles[j][s] contains base learner s for coefficient j
+        Coefficient models learned, ensembles[j][s] contains base learner s for coefficient j
     ncol_X, ncol_Z : int
         Number of parametric coefficients and effect modifiers. Used to check input dimensions after fitting.
     train_loss, validation_loss : list
@@ -114,34 +116,7 @@ class VCBooster:
 
         return self.ncol_X, self.ncol_Z
 
-    @staticmethod
-    def _train_validation_split(X, Z, y, validation_fraction, rng):
-
-        if validation_fraction is not None:
-
-            if not 0 < validation_fraction and validation_fraction < 1:
-                raise ValueError('validation_fraction is expected to be in (0, 1) but {} was passed.'.format(validation_fraction))
-
-            else:
-
-                n = X.shape[0]
-                val_obs = np.zeros(n, dtype='bool')
-                val_obs[rng.choice(n, int(n * validation_fraction), replace=False)] = True
-
-                X_val = X[val_obs, :]
-                Z_val = Z[val_obs, :]
-                y_val = y[val_obs]
-
-                X = X[~val_obs, :]
-                Z = Z[~val_obs, :]
-                y = y[~val_obs]
-
-        else:
-            X_val, Z_val, y_val = None, None, None
-
-        return X, Z, y, X_val, Z_val, y_val
-
-    def fit(self, X, Z, y, validation_fraction=None):
+    def fit(self, X, Z, y, validation_data=None):
         """Fit a varying coefficient model
 
         Parameters
@@ -152,8 +127,8 @@ class VCBooster:
             Design matrix of effect modifiers
         y : numpy.array with shape (n_samples,)
             Dependent variable
-        validation_fraction : None or float, default=None
-            If not None validation_fraction * n_samples observations will be used as validation dataset
+        validation_data : None or tuple, default=None
+            If not None pass tuple (X_val, Z_val, y_val) with validation data
 
         Returns
         -------
@@ -169,14 +144,12 @@ class VCBooster:
         self.ensembles = [[] for j in range(p)]
         self.train_loss = []
 
-        # if validation_fraction is passed, data will be split
-        X, Z, y, X_val, Z_val, y_val = self._train_validation_split(X, Z, y, validation_fraction, rng)
-
         # matrix to hold coefficients for each observation
         B = np.zeros(X.shape)
 
-        # additional set up needed in case of validation
-        if validation_fraction is not None:
+        # check and process validation data
+        if validation_data is not None:
+            X_val, Z_val, y_val = self._validate_input(validation_data[0], validation_data[1], validation_data[2])
             B_val = np.zeros(X_val.shape)
             self.validation_loss = []
         else:
@@ -190,6 +163,7 @@ class VCBooster:
         residual = y - y_hat
         ng = self.loss.negative_gradient(y, y_hat)
 
+        # training loop
         for i in range(self.n_stages):
 
             if self.verbose:
@@ -198,7 +172,7 @@ class VCBooster:
             # keep track of loss for training data and validation data
             self.train_loss.append(self.loss(y, y_hat))
 
-            if validation_fraction is not None:
+            if validation_data is not None:
                 y_hat_val = (X_val * B_val).sum(axis=1)
                 self.validation_loss.append(self.loss(y_val, y_hat_val))
 
@@ -232,7 +206,7 @@ class VCBooster:
                 # update coefficients of current coordinate
                 B[:, j] += self.learning_rate * tree.predict(Z, check_input=False)
 
-                if validation_fraction is not None:
+                if validation_data is not None:
                     B_val[:, j] += self.learning_rate * tree.predict(Z_val, check_input=False)
 
         return self
